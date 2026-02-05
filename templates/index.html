@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentiment Analyzer</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <!-- Header Section -->
+    <div class="header-gradient">
+      <div class="container py-5">
+        <div class="text-center">
+          <h1 class="header-title mb-2">
+            <i class="fas fa-heart"></i> Sentiment Analyzer
+          </h1>
+          <p class="header-subtitle">Discover the emotion behind your text</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container my-5">
+      <div class="card main-card shadow-lg">
+        <div class="card-body p-5">
+          <!-- Input Section -->
+          <div class="input-section mb-5">
+            <form action="/analyze" method="POST" id="sentimentForm">
+              <div class="mb-4">
+                <label class="form-label form-label-custom">
+                  <i class="fas fa-pen"></i> Enter Your Text
+                </label>
+                <textarea
+                  class="form-control textarea-custom"
+                  name="text"
+                  rows="6"
+                  placeholder="Share your thoughts, opinions, or feelings..."
+                  id="textInput"
+                  onkeyup="updateCharCount()"
+                >
+{{ input_text or "" }}</textarea
+                >
+                <div class="char-counter mt-2">
+                  <small>
+                    <span id="charCount">0</span> characters,
+                    <span id="wordCount">0</span> words
+                  </small>
+                </div>
+              </div>
+
+              <div class="button-group">
+                <button type="submit" class="btn btn-analyze">
+                  <i class="fas fa-magic"></i> Analyze Sentiment
+                </button>
+                <button type="reset" class="btn btn-clear">
+                  <i class="fas fa-redo"></i> Clear
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Error Message -->
+          {% if error %}
+          <div
+            class="alert alert-error alert-dismissible fade show"
+            role="alert"
+          >
+            <i class="fas fa-exclamation-circle"></i>
+            <strong>Oops!</strong> {{ error }}
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+              aria-label="Close"
+            ></button>
+          </div>
+          {% endif %}
+
+          <!-- Result Section -->
+          {% if result %}
+          <div class="result-section animate-in">
+            <div class="divider mb-5"></div>
+
+            <!-- Sentiment Badge with Emoji -->
+            <div class="sentiment-badge-container mb-4">
+              {% if result.label == "Positive" %}
+              <div class="sentiment-badge positive">
+                <span class="sentiment-emoji">😊</span>
+                <h3 class="sentiment-label">{{ result.label }}</h3>
+              </div>
+              {% elif result.label == "Negative" %}
+              <div class="sentiment-badge negative">
+                <span class="sentiment-emoji">😞</span>
+                <h3 class="sentiment-label">{{ result.label }}</h3>
+              </div>
+              {% else %}
+              <div class="sentiment-badge neutral">
+                <span class="sentiment-emoji">😐</span>
+                <h3 class="sentiment-label">{{ result.label }}</h3>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Score Breakdown -->
+            <div class="scores-container">
+              <!-- Polarity Score -->
+              <div class="score-card mb-4">
+                <div class="score-header">
+                  <h5><i class="fas fa-chart-line"></i> Polarity Score</h5>
+                  <span class="score-value">{{ result.polarity }}</span>
+                </div>
+                <p class="score-description">
+                  How positive or negative (range: -1 to +1)
+                </p>
+                <div class="progress-wrapper">
+                  <div class="progress">
+                    <div
+                      class="progress-bar {% if result.polarity > 0.1 %} progress-positive {% elif result.polarity < -0.1 %} progress-negative {% else %} progress-neutral {% endif %}"
+                      role="progressbar"
+                      style="width: {{ (result.polarity + 1) * 50 }}%"
+                      aria-valuenow="{{ result.polarity }}"
+                      aria-valuemin="-1"
+                      aria-valuemax="1"
+                    ></div>
+                  </div>
+                  <div class="scale-labels">
+                    <span class="negative-label">Negative</span>
+                    <span class="neutral-label">Neutral</span>
+                    <span class="positive-label">Positive</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Subjectivity Score -->
+              <div class="score-card mb-4">
+                <div class="score-header">
+                  <h5><i class="fas fa-lightbulb"></i> Subjectivity Score</h5>
+                  <span class="score-value">{{ result.subjectivity }}</span>
+                </div>
+                <p class="score-description">
+                  How subjective or objective (range: 0 to 1)
+                </p>
+                <div class="progress-wrapper">
+                  <div class="progress">
+                    <div
+                      class="progress-bar progress-subjectivity"
+                      role="progressbar"
+                      style="width: {{ result.subjectivity * 100 }}%"
+                      aria-valuenow="{{ result.subjectivity }}"
+                      aria-valuemin="0"
+                      aria-valuemax="1"
+                    ></div>
+                  </div>
+                  <div class="scale-labels">
+                    <span class="objective-label">Objective</span>
+                    <span class="subjective-label">Subjective</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interpretation -->
+              <div class="interpretation-box">
+                <h6><i class="fas fa-info-circle"></i> Interpretation</h6>
+                <p>
+                  {% if result.label == "Positive" %} This text expresses
+                  positive sentiment. It contains words and phrases that convey
+                  optimism, happiness, or approval. {% elif result.label ==
+                  "Negative" %} This text expresses negative sentiment. It
+                  contains words and phrases that convey disappointment,
+                  frustration, or disapproval. {% else %} This text is
+                  relatively neutral. It may be descriptive or factual without
+                  strong emotional language. {% endif %}
+                </p>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-5 py-4">
+      <div class="container text-center">
+        <small class="text-muted">
+          Powered by Flask & TextBlob | © 2026 Sentiment Analyzer
+        </small>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      function updateCharCount() {
+        const textInput = document.getElementById("textInput");
+        const text = textInput.value;
+        const charCount = text.length;
+        const wordCount = text
+          .trim()
+          .split(/\s+/)
+          .filter((word) => word.length > 0).length;
+
+        document.getElementById("charCount").textContent = charCount;
+        document.getElementById("wordCount").textContent = wordCount;
+      }
+
+      // Initialize char count on page load
+      document.addEventListener("DOMContentLoaded", updateCharCount);
+    </script>
+  </body>
+</html>
